@@ -216,6 +216,7 @@ LRESULT CALLBACK WndPrc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+#if 0
 #include <ocidl.h>
 #include <olectl.h>
 void draw(HWND hWnd)
@@ -238,7 +239,7 @@ void draw(HWND hWnd)
 		OLE_XSIZE_HIMETRIC hmheight;
 		pIPicture->get_Width(&hmwidth);
 		pIPicture->get_Height(&hmheight);
-		
+
 		int nWidth = MulDiv(hmwidth, GetDeviceCaps(hdc, LOGPIXELSX), 2540);
 		int nHeight = MulDiv(hmheight, GetDeviceCaps(hdc, LOGPIXELSY), 2540);
 
@@ -246,6 +247,48 @@ void draw(HWND hWnd)
 	}
 
 }
+#else
+#include <gdiplus.h>
+#pragma comment(lib,"gdiplus.lib")
+void draw(HWND hWnd)
+{
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput = NULL;
+	ULONG_PTR gdiplusToken = NULL;
+	Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+	{
+		HDC hdc = GetDC(hWnd);
+		Gdiplus::Graphics graphics(hdc);
+
+
+		IStream *pstmp = NULL;
+		CreateStreamOnHGlobal(NULL, TRUE, &pstmp);
+		if (pstmp == NULL)
+		{
+			printf("Stream Create Failed");
+			return;
+		}
+
+		LARGE_INTEGER LiTemp = { 0 };
+		ULARGE_INTEGER uLiZero = { 0 };
+		ULONG ulRealSize = 0;
+		pstmp->Seek(LiTemp, STREAM_SEEK_SET, NULL);
+		pstmp->SetSize(uLiZero);
+
+		pstmp->Write(picbuff, piclen, &ulRealSize);
+
+		Gdiplus::Image * image = Gdiplus::Image::FromStream(pstmp);
+
+
+		graphics.DrawImage(image, 0, 0, image->GetWidth(), image->GetHeight());
+
+
+		pstmp->Release();
+	}
+	Gdiplus::GdiplusShutdown(gdiplusToken);
+}
+
+
+#endif
 
 void * create_wnd(void *)
 {
